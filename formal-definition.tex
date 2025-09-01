@@ -1,0 +1,83 @@
+
+\chapter{Formal Definition of the Language}
+\[
+    \begin{array}{rcl}
+        \Shape & \Coloneqq & [] \mid n :: \sigma         \\
+        \Ctx   & \Coloneqq & \cdot \mid \sigma :: \Gamma
+    \end{array}
+\]
+
+% concatenation and size
+\[
+    \begin{aligned}
+        [] \append \sigma      & = \sigma
+                               & \qquad
+        (n::\sigma)\append\tau & = n::(\sigma\append\tau)
+        \\[2pt]
+        \size([])              & = 1
+                               & \qquad
+        \size(n::\sigma)       & = n \cdot \size(\sigma)
+    \end{aligned}
+\]
+
+% ----- Membership (Elem) -----
+\[
+    \inferrule*{ }{\sigma \mem (\sigma::\Gamma)}
+    \qquad
+    \inferrule*{\sigma \mem \Gamma}{\sigma \mem (\tau::\Gamma)}
+\]
+
+% ----- Indices (optional, mirrors Lean) -----
+\[
+    \inferrule*{ }{\Indices(s_1,[])}
+    \qquad
+    \inferrule*{n \mem s_1 \\ \Indices(s_1,s_2)}{\Indices(s_1, n::s_2)}
+\]
+
+% ----- Permutations -----
+\[
+    \Permsym(\sigma_1,\sigma_2) \text{ means $\sigma_2$ is a reordering of list $\sigma_1$.}
+\]
+
+% ----- Binary operators (shape-preserving) -----
+\[
+    \Binop(\sigma,\sigma) \Coloneqq \mathsf{add}\mid\mathsf{mul}\mid\mathsf{div}\mid\mathsf{max}\mid\mathsf{pow}
+\]
+
+% ===== Typing Judgement: \Gamma \vdash t : \sigma =====
+
+% ret
+\[
+    \inferrule*[right=T\text{-}Ret]{p : \sigma \mem \Gamma}{\judg{\Gamma}{\operatorname{ret}(p)}{\sigma}}
+\]
+
+% lit
+\[
+    \inferrule*[right=T\text{-}Lit]{\ell \in \Float \quad \judg{\sigma::\Gamma}{t}{\tau}}
+    {\judg{\Gamma}{\mathbf{let\ for}\ \sigma := \ell\ \mathbf{in}\ t}{\tau}}
+\]
+
+% binop
+\[
+    \inferrule*[right=T\text{-}Binop]{\mathbf{op}\in \Binop(\sigma,\sigma) \quad p_1:\sigma\mem\Gamma \quad p_2:\sigma\mem\Gamma \quad
+        \judg{\sigma::\Gamma}{t}{\tau}}
+    {\judg{\Gamma}{\mathbf{let}\ p_1\;\mathbf{op}\;p_2\ \mathbf{in}\ t}{\tau}}
+\]
+
+% sum (reduce last block \sigma_1)
+\[
+    \inferrule*[right=T\text{-}Sum]{p : (\sigma_2 \append \sigma_1)\mem\Gamma \quad \judg{\sigma_2::\Gamma}{t}{\tau}}
+    {\judg{\Gamma}{\mathbf{let\ sum}\ \sigma_1 := p\ \mathbf{in}\ t}{\tau}}
+\]
+
+% replicate
+\[
+    \inferrule*[right=T\text{-}Replicate]{p:\sigma_1\mem\Gamma \quad \judg{(\sigma_1 \append \sigma_0)::\Gamma}{t}{\tau}}
+    {\judg{\Gamma}{\mathbf{let\ replicate}\ \sigma_0\ \mathbf{from}\ p\ \mathbf{in}\ t}{\tau}}
+\]
+
+% shuffle
+\[
+    \inferrule*[right=T\text{-}Shuffle]{p:\sigma_1\mem\Gamma \quad \pi:\Permsym(\sigma_1,\sigma_2) \quad \judg{\sigma_2::\Gamma}{t}{\tau}}
+    {\judg{\Gamma}{\mathbf{let\ shuffle}\ \sigma_2 := p\langle \pi\rangle\ \mathbf{in}\ t}{\tau}}
+\]

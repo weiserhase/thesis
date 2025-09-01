@@ -1,0 +1,121 @@
+\chapter{Translation to Cuda}
+\section{General Notes}
+All Kernels in the following sections will be similarly structured.
+This structure is defined as follows:
+\begin{lstlisting}[language=c, caption={Kernel Structure}, label={lst:kernel-structure}, mathescape=true]
+    __global__ void kernel_name(float* out, {Input Arglist}, int N){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N) {
+            return;
+        }
+        $\vdots$
+    }
+\end{lstlisting}
+This structure is used to make every kernel launch as understandable as possible,
+so that the reader of a compiled programm can easily see which memory is used
+and manipulated by each kernel.
+This also includes the fact that all arguments to a kernel are immutable, meaning
+that the underlying memory may not be modified by the kernel.
+Making the arguments immutable has two reasons:
+\begin{itemize}
+    \item \textbf{Safty:} Since all arguments are immutable, it is not possible to
+          create race conditions by modifiying the input array.
+          %TODO Cache
+    \item \textbf{Performance:} The compiler can assume that the input arrays are not modified, and therefore can apply multiple optimizations that can speed
+          up some programs.
+\end{itemize}
+
+
+\subsection{Literal Kernel}
+The Translation of a literal kernel is straightforward. since for every element in a array we just assign  the value of the literal to the
+corresponding position in the input array.
+Translation of the following generic literal instruction:
+\begin{lstlisting}[mathescape=true]
+    $\vdots$
+    let for $\sigma$ := $l$ in $t$
+    $\vdots$
+\end{lstlisting}
+\begin{lstlisting}[language=c, caption={Literal Kernel Translation}, label={lst:literal-kernel}, mathescape=true]
+    __global__ void literal_kernel(float* out, int N){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N) {
+            return;
+        }
+        out[idx] = $l$;
+    } 
+    $\vdots$
+    N = $(\prod\sigma)$;
+    literal_kernel<<<(N + 255) / 256, 256>>>(out, N);
+\end{lstlisting}
+
+
+
+\textbf{Why this kernel is efficient?}
+The kernel is very efficient because it makes the best use of all possible stages of parralelism.
+The block size can be arbitrarily chose to be a multiple of 32 which is the warp size of the GPU.
+Since all threads within the block are independent, the kernel never waitts for any other threads to finish.
+Furthermore since threads with consecutive indices inside a block always write into consecutive addresses of the Memory, writes are perfectly coalesced and every warp will only perform one memory operation when writing the values.
+.
+%TODO This kernel is not very efficient sinceit spawns a thred for every element in the out array.
+
+\subsection{Binop Kernel}
+The translation of a binary operation instruction is quite similar
+\begin{lstlisting}[mathescape=true]
+    $\vdots$
+    let $b_1 \oplus b_2$ in $t$
+    $\vdots$
+\end{lstlisting}
+\begin{lstlisting}[mathescape=true]
+$\vdots$
+__global__ void binop_kernel(float* out, float* in1, float* in2, int N){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N) {
+                return;
+            }
+        out[idx] = in1[idx] $\oplus$ in2[idx];
+    }
+$\vdots$
+N = $(\prod\sigma)$;
+binop_kernel<<<(N + 255) / 256, 256>>>(out, $b_1$, $b_2$, N);
+\end{lstlisting}
+
+One advantage with the above approach is the lack of branching and descisions in the kernel. The only branching that does occur is the check for indicies that are out of bounds for the array.
+This means that all threads in a warp will in most cases (except border blocks) utilize the full possiblilites of SIMT (Single Instruction, Multiple Threads).
+There is no divergence in the threads of one warp, meaning all memory accesses are
+perfectly coalesced.
+
+\subsection{Replicate Kernel}
+Translating a replicate instruction is a bit more complicated in comparison to the previous two translations.
+
+The difficulty arises from the fact that  we want to extend the Array along the
+trailing dimension of the array, (Meaning %TODO)
+
+\begin{lstlisting}[mathescape=true]
+    $\vdots$
+    let extend $v$ with $\sigma_2$ in $t$
+    $\vdots$
+\end{lstlisting}
+\begin{lstlisting}[mathescape=true]
+    $\vdots$
+    __global__ void extend_kernel(float* out, float* in, int N){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N) {
+            return;
+        }
+        int in_idx = idx / $\prod\sigma_2$;
+        float val = __ldg(in + in_idx);
+        out[idx] = val;
+    }
+\end{lstlisting}
+\newcommand{\ldg}{\ensuremath{\texttt{\_\_ldg}}}
+This kernel uses the \ldg intrinsic to load the value from the input
+array using the read only cache which is available on most modern GPU's and often
+multiple times faster than normal memory reads.
+Since we read every value of the input array up to $\prod\sigma_2$ times, we
+can use the \ldg intrinsic to read the value from the cache instead.
+
+This kernel is also mostly coalesced since we can only have $\texttt{num\_threads}$ actual memory accesses per block.
+Every other request is directly served from the read only cache.
+\subsection{}
+
+%TODO Source https://stackoverflow.com/questions/26603188/what-is-the-difference-between-ldg-intrinsic-and-a-normal-execution

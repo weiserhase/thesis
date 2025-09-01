@@ -51,10 +51,10 @@
 % Here's how you define a custom language, Effekt is used here as an example
 \lstdefinelanguage{Effekt}{
   morekeywords={%
-    let,true,false,val,var,if,else,while,type,effect,interface,%
-    try,with,case,do,fun,match,def,module,import,export,extern,%
-    include,record,box,unbox,return,region,resource,%
-    new,and,is,namespace,pure},
+      let,true,false,val,var,if,else,while,type,effect,interface,%
+      try,with,case,do,fun,match,def,module,import,export,extern,%
+      include,record,box,unbox,return,region,resource,%
+      new,and,is,namespace,pure},
   otherkeywords={=>},
   alsoletter={?,!},
   sensitive=true,
@@ -66,3 +66,39 @@
 }[keywords,comments,strings]
 
 \newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+
+\usepackage{listings}
+\lstdefinestyle{code}{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible, keepspaces=true,
+  showstringspaces=false, frame=single
+}
+% (Optional) light keyword coloring for readability
+\lstdefinelanguage{Astra}%
+{morekeywords={let,fn,return,replicate,permute,sum,max,zeros_like,axis,axes},%
+  sensitive=true}
+
+\lstdefinelanguage{ArrayDSL}%
+{morekeywords={let,in,ret,sum,max,div},%
+  sensitive=true}
+
+% Make a few Unicode symbols render reliably in listings (pdflatex)
+\lstset{literate=
+  {×}{{$\times$}}1
+{⩥}{{$\mathbin{\unicode{x2A65}}$}}1
+{⟨}{{$\langle$}}1
+{⟩}{{$\rangle$}}1
+}
+% ----- Basic symbols & helpers -----
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\Float}{\mathbb{R}}
+\newcommand{\Shape}{\mathsf{Shape}}
+\newcommand{\Ctx}{\mathsf{Ctx}}
+\newcommand{\Permsym}{\mathsf{Perm}}
+\newcommand{\Binop}{\mathsf{Binop}}
+\newcommand{\append}{\mathbin{+\!\!+}}
+\newcommand{\size}{\operatorname{size}}
+\newcommand{\Indices}{\operatorname{Indices}}
+\newcommand{\judg}[3]{#1 \vdash #2 : #3}
+\newcommand{\mem}{\in}
+\newcommand{\Coloneqq}{\mathrel{::=}}

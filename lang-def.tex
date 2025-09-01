@@ -1,0 +1,153 @@
+\chapter{Introducing Compiling with Arrays}
+The paper compiling with arrays lays the baseline for the following work and was heavily inspired by the Language and idea introduced.\\
+Compiling with array introduces a two Array languages that allow for partial evaluation from the surfacce Language to Polara.
+The paper elaborates that partial evaluation is not safe since every nested let binding, if/else construct aswell as every function introduce different scopes
+Whenever a scope is introduced the partial evaluation may lead to a potential exponential blowup in the number of duplicates for every variable.
+To avoid this problem the paper introduces steps to avoid this problem entirely.
+The method they use to eliminat scopes is a pre evaluation step. In which all nested
+let bindings, functions and if/else branches are simplified.
+After this simplification step the language can be partially evaluated without the
+risk of exponential blowup.
+
+The resulting language is a quite simple array language that allows for very easy and simple implemntation of even more optimizaion passes.
+These classic optimizationpasses include loop fission, loop invariant code motiona and dead code elimination.
+
+\subsection{Introduction to Cuda}
+To propperly allow for explanations in the following chapters it is important that the reader has some undersstanding of the CUDA programming language and the  undelying technical details.
+\subsubsection{CUDA Programming Model}
+CUDA is a paralell programming model and API developed by NVIDIA for general purpose computing on its own GPUs.
+It allows developers to write programms that can run  on any NVIDIA GPU, leveraging the massive parallel processing power of these devices.
+CUDA is based on the C programming language and extends it with keywords and constructs for parallel execution.
+The CUDA programming model abstracts away most of the complexities linked to paralell
+programming, allowing developers to easily write code that runs on many threads simultaneously.
+The CUDA programming model is based on a hierarchy of 3 Concepts:
+\begin{itemize}
+    \item \textbf{Thread:} A thread is the smallest unit of execution in CUDA
+          Every thread executes the exact same code and is only distinguished by its unique
+          ID. This id is comprised of two 3d vectors 1. The block ID This id uniquely identifies the block that the thread is in. The second vector identifies every thread inside its respective block.
+    \item \textbf{Block:} A Block is a collection of up to 1024 threads that can be executed in paralell. Items inside a block can communicate and share memory with each other. Threads inside a block can be sychronized, meaning all threads wait until every thread of a block has reached a certain point in the code.
+          This behavior can be used to implement algorithms that require  high control over cache and memory access patterns.
+          All threads inside a block are guranteed to be executed on the same Streaming Multiprocessor (SM) of the GPU.
+          This gurantees that all threads inside a block will have to the same shared
+          without any additional context switches, therefore the L1 cache and shared
+          memory will be very fast
+    \item \textbf{Grid:} A Grid is a collection of many blocks that can be executed in parallel and are fully independent of each other.
+\end{itemize}
+
+The beauty with this approach for paralellism is the hudden nature of the paralellism.
+This approach to hiding paralellism is onyl possible because the developer is not able to control the execution order.
+CUDA extendss this hidden paralellism even further by introducing thr conept of warps.
+A Warp is a collection of 32 consecutive threads, that is exeuted in "Lockstep"
+This idea is similar to the concept of Single Instruction Multiple Data (in short: SIMD).
+Since the code is the same for every thread every instruction can be interpretet as a "SIMD" instruction. This allows for significantly faster memory access times.
+Consider the following Example:
+\begin{verbatim}
+    __global__ square(float* out, float*in){
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N) return;
+        float val = in[idx];
+        out[idx] = val * val;
+    }
+\end{verbatim}
+Instead of perfroming one Memory access at a time only usng 4 Byte, warps improve this since 32 conseccutive threads are executed at once meaning insteaf of 32 separate
+memory operatios only one memory operation is performd yielding thee full 128 Bytes.
+The same principle applies when writing to the out array.
+Similarly instead of performing 32 alu operations to multiply the value with itself
+We only perform one ALU operation for all 32 multiplications.
+
+This concept can lead to incredable speedups when executing code. On the other hand if code is written without the concept of waps in mind this can lead to large performance bottlenecks. Since we cannot unify our load adresses into one load and have to perform 32 loads sequentially. Since each of these instructions loads 128 Bytes from Memory this quickly leads to cache invalidation as well as Memory Bottlenecks since we are performing the load operation on possibly Hundred's or even thousand's of SM's in paralell.
+
+\subsubsection{Memory Model of GPU's and Cache hierarchy}
+The GPU has it's dedicated Global Memory that functions mostly the sama as RAM on a CPU. This global memory is alo cconnected to the Computers RAM to transfer data from CPU to GPU.
+The Cache and Memory hierarchy of the GPU is very different compared to most other devices.
+The Memory is layed out in two seperate Stages:
+\begin{itemize}
+    \item \textbf{Stage 1:} The Memory in Stage one is the closest Memory to the SM
+          and is not shared between different SM's
+          Itis split into multiple different sized sections. These Sections include:
+          \begin{itemize}
+              \item L1 Cache: This is standard cache block that for caches data that is written or read via a memory operation.
+              \item Shared Memory: This secrion of Stage 1 Memory can be utilized like a %TODO
+                    form of memory that is orders of magnitude faster than the global memory.
+                    The tradeoff with this kind of memory is the size, whih is typically arround
+                    16-64KB in size
+          \end{itemize}
+    \item \textbf{Stage 2/L2 Cache:} The second stage of Memory is equivalent to the L2 Cache. The L2 Cache is shared accross all SM's and about 4MiB in size.
+\end{itemize}
+%TODO The developer has no control over the order of execution or place of execution 
+
+
+
+\chapter{Introduction by Example}
+In the following chapter i will introduce the language defined in this work by providing stp by step examples for performing array operations with the language.
+
+These examples will be shown first in a Pseudocode style to make them more understandable and then in a simplified language form to introduce the core ideas of the language.
+
+
+Later in this work the language will be defined in a formal way
+In the following im going to introduce 3 Examples that are used to introduce the
+language and translation of the language defined in this work.
+
+\subsection*{Example 1: Simple Base Operations}
+\textbf{Pseudocode:}\\
+\begin{verbatim*}
+
+\end{verbatim*}
+\subsection{Example 2: Dense Layer}
+\textbf{Pseudocode:}\\
+%TODO
+\textbf{Language }
+\begin{verbatim}
+    let for := A [n] in // A1
+    let for [n,m] := A1
+\end{verbatim}
+\chapter{Language Definition}
+
+\section{Syntax Definition}
+\newcommand{\tl}{\texttt{let }}
+\newcommand{\ti}{\texttt{in }}
+\newcommand{\tf}{\texttt{for }}
+\newcommand{\tr}{\texttt{ret }}
+\newcommand{\ts}{\texttt{sum }}
+\newcommand{\sep}{\;|\;}
+\newcommand{\eqcomment}[1]{// \textit{\text{#1}}}
+\eqcomment{Array of literal l with shape $\sigma$}
+
+\begin{alignat*}{1}
+    binop := & + \sep * \sep /  \sep max \sep pow                      \\
+    t :=     & \;\tl \tf \sigma := f \ti t                             \\
+             & |\; \tl \tf \sigma := v\langle \mathbb{P} \rangle \ti t \\
+             & |\;\tl \tf := v  \sigma \ti t                           \\
+             & |\, \tl v_1 binop v_2 \ti t                             \\
+             & |\; \tl \ts \sigma := v \ti t                           \\
+             & |\; ret v                                               \\
+\end{alignat*}
+
+
+\section{Translation}
+The Translation of a Program is performed in multiple single steps.
+Every Instruction in a Program is translated to exactly one kernel in the final kernel
+Since all Instructions are only one simple operation this translation yields a
+direct translation of the Program.
+
+
+
+\subsection{Language overview}
+The Language is based on the Fact that every Term of the Language/ every instruction is adding exactly one variable to the Context.
+Therefore a term with depth $k$ will have exactly one $k$ variables available.
+This makes working and translating the Language quite straight forward.
+Since this Language has completely omitted every form of different Types of variables e.g float, there are no conversions casting and similar Instructions necessary.\\
+Furthermore the Language completely drops any index manipulations when woring with arrays.
+This limits the expressivness of the language, but on the other hand it also avoids having a strong type system for index manipulations.
+
+\subsubsection{Float Literal Array}
+The Instruction to produce a array A of shape $\sigma$ where $\forall i_0 \in \sigma[0], i_1 \in \sigma[1], i_2\in \sigma[2], i_3\in \sigma[3], \dots, A[i_1, i_2, i_3, \dots] = l$
+
+\subsubsection{Replicate Array}
+The Repliate instruction is used to replicate an array A by extending its shape $\sigma_1$ towards the end with new dimensions $\sigma_2$
+meaning the resulting array has the shape $\sigma_1+\sigma_2$.
+This m
+
+
+
+% Requires: \usepackage{amsmath,amssymb,mathpartir}
